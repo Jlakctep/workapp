@@ -4,17 +4,18 @@ on:
   workflow_dispatch:
     inputs:
       mode:
-        description: 'Build mode: unsigned (AltStore will re-sign) or signed (using your certs)'
+        description: 'unsigned (AltStore re-signs) or signed (your certs)'
         required: true
         default: 'unsigned'
         type: choice
-        options:
-          - unsigned
-          - signed
+        options: [unsigned, signed]
 
 jobs:
   build:
     runs-on: macos-14
+    defaults:
+      run:
+        working-directory: WorkApp  # проект у тебя внутри WorkApp
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -49,7 +50,7 @@ jobs:
         if: ${{ inputs.mode == 'signed' }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/${{ secrets.PROVISIONING_PROFILE_NAME }}.mobileprovision"      
+          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/${{ secrets.PROVISIONING_PROFILE_NAME }}.mobileprovision"
 
       - name: Archive (signed)
         if: ${{ inputs.mode == 'signed' }}
@@ -81,5 +82,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: PMHub.ipa
-          path: |
-            build/export/*.ipa
+          path: WorkApp/build/export/*.ipa
