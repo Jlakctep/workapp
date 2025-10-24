@@ -49,7 +49,7 @@ jobs:
         if: ${{ inputs.mode == 'signed' }}
         run: |
           mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
-          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/${{ secrets.PROVISIONING_PROFILE_NAME }}.mobileprovision"
+          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/${{ secrets.PROVISIONING_PROFILE_NAME }}.mobileprovision"      
 
       - name: Archive (signed)
         if: ${{ inputs.mode == 'signed' }}
