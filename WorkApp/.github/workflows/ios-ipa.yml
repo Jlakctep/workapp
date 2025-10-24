@@ -1,0 +1,102 @@
+name: iOS .ipa (AltStore)
+
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Build mode: unsigned (AltStore will re-sign) or signed (using your certs)'
+        required: true
+        default: 'unsigned'
+        type: choice
+        options:
+          - unsigned
+          - signed
+
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Select Xcode 16
+        shell: bash
+        run: |
+          set -e
+          CANDIDATE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
+          if [ -z "$CANDIDATE" ]; then
+            echo "No Xcode_16*.app found, using default:"
+            xcodebuild -version
+          else
+            echo "Using $CANDIDATE"
+            echo "DEVELOPER_DIR=$CANDIDATE/Contents/Developer" >> $GITHUB_ENV
+            $CANDIDATE/Contents/Developer/usr/bin/xcodebuild -version
+          fi
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate Xcode project
+        run: xcodegen generate --spec WorkApp/project.yml --project WorkApp
+
+      - name: Build (unsigned)
+        if: ${{ inputs.mode == 'unsigned' }}
+        run: |
+          xcodebuild -project WorkApp/PMHub.xcodeproj \
+            -scheme PMHub \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath WorkApp/build/dd \
+            build
+          mkdir -p WorkApp/build/export/Payload
+          cp -R WorkApp/build/dd/Build/Products/Release-iphoneos/PMHub.app WorkApp/build/export/Payload/PMHub.app
+          cd WorkApp/build/export
+          zip -r PMHub-unsigned.ipa Payload
+
+      - name: Import signing certificate
+        if: ${{ inputs.mode == 'signed' }}
+        uses: apple-actions/import-codesign-certs@v2
+        with:
+          p12-file-base64: ${{ secrets.P12_BASE64 }}
+          p12-password: ${{ secrets.P12_PASSWORD }}
+
+      - name: Install provisioning profile
+        if: ${{ inputs.mode == 'signed' }}
+        run: |
+          mkdir -p ~/Library/MobileDevice/Provisioning\ Profiles
+          echo "${{ secrets.MOBILEPROVISION_BASE64 }}" | base64 --decode > "~/Library/MobileDevice/Provisioning Profiles/${{ secrets.PROVISIONING_PROFILE_NAME }}.mobileprovision"
+
+      - name: Archive (signed)
+        if: ${{ inputs.mode == 'signed' }}
+        run: |
+          xcodebuild -project WorkApp/PMHub.xcodeproj \
+            -scheme PMHub \
+            -configuration Release \
+            -destination 'generic/platform=iOS' \
+            -archivePath WorkApp/build/PMHub.xcarchive \
+            PRODUCT_BUNDLE_IDENTIFIER=${{ secrets.APP_BUNDLE_ID }} \
+            DEVELOPMENT_TEAM=${{ secrets.APPLE_TEAM_ID }} \
+            PROVISIONING_PROFILE_SPECIFIER='${{ secrets.PROVISIONING_PROFILE_NAME }}' \
+            clean archive
+
+      - name: Prepare exportOptions (signed)
+        if: ${{ inputs.mode == 'signed' }}
+        run: |
+          mkdir -p WorkApp/build/export
+          sed -e "s/\$(TEAM_ID)/${{ secrets.APPLE_TEAM_ID }}/g" WorkApp/ci/exportOptions.plist > WorkApp/build/export/exportOptions.resolved.plist
+
+      - name: Export .ipa (signed)
+        if: ${{ inputs.mode == 'signed' }}
+        run: |
+          xcodebuild -exportArchive \
+            -archivePath WorkApp/build/PMHub.xcarchive \
+            -exportPath WorkApp/build/export \
+            -exportOptionsPlist WorkApp/build/export/exportOptions.resolved.plist
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: PMHub.ipa
+          path: |
+            WorkApp/build/export/*.ipa
+
