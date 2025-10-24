@@ -19,19 +19,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Select Xcode 16
-        shell: bash
-        run: |
-          set -e
-          CANDIDATE=$(ls -d /Applications/Xcode_16*.app 2>/dev/null | sort -V | tail -n 1)
-          if [ -z "$CANDIDATE" ]; then
-            echo "No Xcode_16*.app found, using default:"
-            xcodebuild -version
-          else
-            echo "Using $CANDIDATE"
-            echo "DEVELOPER_DIR=$CANDIDATE/Contents/Developer" >> $GITHUB_ENV
-            $CANDIDATE/Contents/Developer/usr/bin/xcodebuild -version
-          fi
+      - name: Setup Xcode 16
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: '16'
 
       - name: Install XcodeGen
         run: brew install xcodegen
