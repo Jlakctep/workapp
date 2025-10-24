@@ -1,0 +1,39 @@
+name: PMHub
+options:
+  minimumXcodeGenVersion: 2.39.0
+  groupSortPosition: top
+  deploymentTarget:
+    iOS: "16.0"
+settings:
+  base:
+    INFOPLIST_FILE: PMHub/Resources/Info.plist
+    PRODUCT_BUNDLE_IDENTIFIER: app.pmhub.local
+    SWIFT_VERSION: 5.9
+    IPHONEOS_DEPLOYMENT_TARGET: "16.0"
+    CURRENT_PROJECT_VERSION: 1
+    MARKETING_VERSION: 0.1.0
+packages: {}
+targets:
+  PMHub:
+    type: application
+    platform: iOS
+    sources:
+      - path: PMHub
+    settings:
+      base:
+        PRODUCT_NAME: PMHub
+        DEVELOPMENT_TEAM: ""
+        CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS: YES
+    scheme:
+      testTargets:
+        - PMHubTests
+    dependencies: []
+  PMHubTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: PMHubTests
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: app.pmhub.local.tests
